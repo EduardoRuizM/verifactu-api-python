@@ -70,7 +70,7 @@ Es obligatorio indicar en cada factura como responsable el sistema informático 
 - **TipoUsoPosibleMultiOT** si el programa lo pueden utilizar varios obligados tributarios (por defecto S)
 - **IndicadorMultiplesOT** si el programa lo utilizan varios obligados tributarios (por defecto S) (por defecto S)
 
-# ⚙ Instalación para Python (Flask + MySQL/MariaDB)
+# ⚙ Instalación para Python (Flask + MySQL/MariaDB + qrcode)
 
 ### 1. Clona el repositorio
 ```

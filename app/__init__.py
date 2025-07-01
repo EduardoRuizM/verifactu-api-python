@@ -74,7 +74,11 @@ def qr_invoice(company_id, id):
     invoice = Invoice.query.filter_by(id=id, company_id=company_id).first()
     if invoice is None:
         return jsonify({'error': 'Not found'}), HTTPStatus.NOT_FOUND
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    img = qrcode.make(invoice.get_verifactu_qr())
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return send_file(buf, mimetype='image/png')
 
 
 def insertInvoice(company_id, type, refs=None, stype=None):

@@ -32,8 +32,8 @@ class Company(db.Model):
     formula_r = db.Column(db.String(25), default='R-%y%/%n.8%', server_default=text("'R-%y%/%n.8%'"))
     first_num = db.Column(INTEGER(unsigned=True), default='1', server_default=text("'1'"))
     created = db.Column(db.Date, nullable=False, default=db.func.now())
-    key_file = db.Column(db.Text)
-    cert_file = db.Column(db.Text)
+    key_file = db.Column(db.String(200))
+    cert_file = db.Column(db.String(200))
     next_send = db.Column(db.DateTime)
     test = db.Column(db.Boolean, nullable=False, default=True, server_default='1')
 
