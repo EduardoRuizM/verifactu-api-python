@@ -1,0 +1,11 @@
+[project]
+name = "verifactu-api-python"
+version = "1.0.0"
+description = "Veri*Factu API (Python)"
+authors = [
+    {name = "Eduardo Ruiz", email = "eruiz@dataclick.es"}
+]
+license = {text = "MIT"}
+keywords = ["verifactu", "veri*factu", "facturación", "facturación electrónica", "aeat"]
+homepage = "https://github.com/EduardoRuizM/verifactu-api-python"
+repository = "https://github.com/EduardoRuizM/verifactu-api-python"
