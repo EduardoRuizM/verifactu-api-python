@@ -117,14 +117,18 @@ class verifactuXML:
                 xml += f'<FechaExpedicionFactura>{self.dt(rinvoice)}</FechaExpedicionFactura>{tag2}'
 
             if invoice.verifactu_stype == 'S':
+                bi_total = 0.0
+                tvat_total = 0.0
                 for rinvoice in rinvoices:
                     lines = db.session.query(
                         db.func.sum(InvoiceLine.bi).label('bi'),
                         db.func.sum(InvoiceLine.tvat).label('tvat')
                     ).filter(InvoiceLine.invoice_id == rinvoice.id).group_by(InvoiceLine.vat).all()
                     for line in lines:
-                        xml += f'<ImporteRectificacion><BaseRectificada>{self.cur(line.bi)}</BaseRectificada>'
-                        xml += f'<CuotaRectificada>{self.cur(line.tvat)}</CuotaRectificada></ImporteRectificacion>'
+                        bi_total += float(line.bi or 0)
+                        tvat_total += float(line.tvat or 0)
+                xml += f'<ImporteRectificacion><BaseRectificada>{self.cur(bi_total)}</BaseRectificada>'
+                xml += f'<CuotaRectificada>{self.cur(tvat_total)}</CuotaRectificada></ImporteRectificacion>'
 
         xml += f'<DescripcionOperacion>{descr}</DescripcionOperacion>'
         if invoice.verifactu_type == 'F2':
