@@ -1,6 +1,6 @@
 [project]
 name = "verifactu-api-python"
-version = "1.0.0"
+version = "1.0.1"
 description = "Veri*Factu API (Python)"
 authors = [
     {name = "Eduardo Ruiz", email = "eruiz@dataclick.es"}
