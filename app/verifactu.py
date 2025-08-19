@@ -13,7 +13,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 from datetime import datetime
-from sqlalchemy import update
+from sqlalchemy import desc, update
 from configparser import UNNAMED_SECTION
 
 from app import db, config_file, time_zone
@@ -71,7 +71,7 @@ class verifactuXML:
         return db.session.query(Invoice).filter(
             Invoice.company_id == company.id,
             Invoice.fingerprint.isnot(None)
-        ).order_by(Invoice.verifactu_dt.desc()).first()
+        ).order_by(desc(Invoice.verifactu_dt), desc(Invoice.id)).first()
 
     def fingerprint(self, company, invoice, last, dt, voided=False):
         last_fp = last.fingerprint if last is not None else ''
