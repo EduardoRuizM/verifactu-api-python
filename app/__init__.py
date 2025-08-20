@@ -119,27 +119,79 @@ def create_invoice(company_id):
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/rect', methods=['POST'])
 def create_invoice_rect(company_id, id):
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    data = request.get_json(silent=True) or {}
+    if not re.fullmatch(r'\d+(,\d+)*', id):
+        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+
+    ids = [int(i) for i in id.split(',')]
+    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
+    for invoice in invoices:
+        if not (invoice.verifactu_type in ['F1', 'F2', 'F3']) or invoice.invoice_ref_id or invoice.voided:
+            return {'error': f'Not type F1/F2/F3, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+
+    type = 'R1' if 'vat_id' in data else 'R5'
+    return insertInvoice(company_id, type, invoices, 'I')
 
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/rect2', methods=['POST'])
 def create_invoice_rect2(company_id, id):
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    data = request.get_json(silent=True) or {}
+    if not re.fullmatch(r'\d+(,\d+)*', id):
+        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+
+    ids = [int(i) for i in id.split(',')]
+    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
+    for invoice in invoices:
+        if not (invoice.verifactu_type in ['F1', 'F3']) or invoice.invoice_ref_id or invoice.voided:
+            return {'error': f'Not type F1/F3, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+
+    return insertInvoice(company_id, 'R2', invoices, 'I')
 
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/rectsust', methods=['POST'])
 def create_invoice_rectsust(company_id, id):
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    data = request.get_json(silent=True) or {}
+    if not re.fullmatch(r'\d+(,\d+)*', id):
+        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+
+    ids = [int(i) for i in id.split(',')]
+    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
+    for invoice in invoices:
+        if not (invoice.verifactu_type in ['F1', 'F2', 'F3', 'R1', 'R5']) or invoice.invoice_ref_id  or invoice.voided:
+            return {'error': f'Not type F1/F2/F3/R1/R5, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+
+    type = 'R1' if 'vat_id' in data else 'R5'
+    return insertInvoice(company_id, type, invoices, 'S')
 
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/sust', methods=['POST'])
 def create_invoice_sust(company_id, id):
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    if not re.fullmatch(r'\d+(,\d+)*', id):
+        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+
+    ids = [int(i) for i in id.split(',')]
+    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
+    for invoice in invoices:
+        if invoice.verifactu_type != 'F2' or invoice.invoice_ref_id or invoice.voided:
+            return {'error': f'Not type F2, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+
+    return insertInvoice(company_id, 'F3', invoices)
 
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/voided', methods=['POST'])
 def create_invoice_voided(company_id):
-    return jsonify({'msg': 'Feature in development - available in the next release'})
+    ids = [int(i) for i in id.split(',')]
+    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
+    for invoice in invoices:
+        if invoice.voided or not invoice.verifactu_dt or invoice.invoice_ref_id:
+            return {'error': f'Already voided, not sent or referenced: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+
+    company = db.session.get(Company, company_id)
+    if not company:
+        return jsonify({'error': 'Company not found'}), HTTPStatus.NOT_FOUND
+
+    verifactuxml = verifactuXML()
+    return jsonify(verifactuxml.voided(company, invoices))
 
 
 @app.route('/api/process', methods=['GET'])

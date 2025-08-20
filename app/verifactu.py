@@ -163,7 +163,7 @@ class verifactuXML:
         xml += f'<Encadenamiento>'
         if last:
             xml += f'<RegistroAnterior><IDEmisorFactura>{self.cod(company.vat_id)}</IDEmisorFactura>'
-            xml += f'<NumSerieFactura>{invoice.get_number_format()}</NumSerieFactura>'
+            xml += f'<NumSerieFactura>{last.get_number_format()}</NumSerieFactura>'
             xml += f'<FechaExpedicionFactura>{self.dt(last)}</FechaExpedicionFactura>'
             xml += f'<Huella>{last.fingerprint}</Huella></RegistroAnterior>'
         else:
@@ -196,7 +196,7 @@ class verifactuXML:
         if last:
             xml += f"""<RegistroAnterior>
                             <IDEmisorFactura>{self.cod(company.vat_id)}</IDEmisorFactura>
-                            <NumSerieFactura>{invoice.get_number_format()}</NumSerieFactura>
+                            <NumSerieFactura>{last.get_number_format()}</NumSerieFactura>
                             <FechaExpedicionFactura>{self.dt(last)}</FechaExpedicionFactura>
                             <Huella>{last.fingerprint}</Huella>
                         </RegistroAnterior>"""
@@ -273,13 +273,17 @@ class verifactuXML:
                                     </ObligadoEmision>
                                 </sum:Cabecera>"""
 
+        last_map = {}
         last = self.last_invoice(company)
 
         for invoice in invoices:
+            invoice.fingerprint = self.fingerprint(company, invoice, last, dt, voided)
+            last_map[invoice.id] = last
             if voided:
                 xml += self.registro_anulacion(company, invoice, last, dt)
             else:
                 xml += self.registro_alta(company, invoice, last, dt)
+            last = invoice
 
         xml += '''    </sum:RegFactuSistemaFacturacion>
                     </soapenv:Body>
@@ -341,7 +345,7 @@ class verifactuXML:
                 verifactu_csv = invoice.verifactu_csv + "\n" + csv if invoice.verifactu_csv else csv
                 stmt = stmt.values({'verifactu_csv': verifactu_csv.strip()})
             if timestamp_presentacion:
-                stmt = stmt.values({'fingerprint': self.fingerprint(company, invoice, last, timestamp_presentacion, voided)})
+                stmt = stmt.values({'fingerprint': self.fingerprint(company, invoice, last_map[invoice.id], timestamp_presentacion, voided)})
             if not cod_error and voided:
                 stmt = stmt.values({'voided': 1})
             db.session.execute(stmt)
