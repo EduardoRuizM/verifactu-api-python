@@ -135,8 +135,6 @@ class verifactuXML:
                 xml += f'<CuotaRectificada>{self.cur(tvat_total)}</CuotaRectificada></ImporteRectificacion>'
 
         xml += f'<DescripcionOperacion>{descr}</DescripcionOperacion>'
-        if invoice.verifactu_type == 'F2':
-            xml += f'<FacturaSimplificadaArt7273>S</FacturaSimplificadaArt7273>'
 
         if not invoice.vat_id:
             xml += f'<FacturaSinIdentifDestinatarioArt61d>S</FacturaSinIdentifDestinatarioArt61d>'
