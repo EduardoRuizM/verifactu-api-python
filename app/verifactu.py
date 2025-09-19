@@ -108,25 +108,29 @@ class verifactuXML:
             if invoice.verifactu_stype:
                 xml += f'<TipoRectificativa>{"S" if invoice.verifactu_stype == "S" else "I"}</TipoRectificativa>'
 
-            rinvoices = db.session.query(Invoice).filter(Invoice.invoice_ref_id == invoice.id).order_by(Invoice.dt).all()
-            for rinvoice in rinvoices:
-                tag1 = '<FacturasSustituidas>' if invoice.verifactu_type == 'F3' else '<FacturasRectificadas>'
-                tag2 = '</FacturasSustituidas>' if invoice.verifactu_type == 'F3' else '</FacturasRectificadas>'
-                xml += f'{tag1}<IDEmisorFactura>{self.cod(company.vat_id)}</IDEmisorFactura>'
-                xml += f'<NumSerieFactura>{rinvoice.get_number_format()}</NumSerieFactura>'
-                xml += f'<FechaExpedicionFactura>{self.dt(rinvoice)}</FechaExpedicionFactura>{tag2}'
+            rinvoices = db.session.query(Invoice).filter(Invoice.id == invoice.invoice_ref_id).order_by(Invoice.dt).all()
+            if rinvoices:
+                xml += '<FacturasSustituidas>' if invoice.verifactu_type == 'F3' else '<FacturasRectificadas>'
+                tag = 'IDFacturaSustituida' if invoice.verifactu_type == 'F3' else 'IDFacturaRectificada'
+                for rinvoice in rinvoices:
+                    xml += f'<{tag}><IDEmisorFactura>{self.cod(company.vat_id)}</IDEmisorFactura>'
+                    xml += f'<NumSerieFactura>{rinvoice.get_number_format()}</NumSerieFactura>'
+                    xml += f'<FechaExpedicionFactura>{self.dt(rinvoice)}</FechaExpedicionFactura></{tag}>'
+                xml += '</FacturasSustituidas>' if invoice.verifactu_type == 'F3' else '</FacturasRectificadas>'
 
             if invoice.verifactu_stype == 'S':
                 bi_total = 0.0
                 tvat_total = 0.0
                 for rinvoice in rinvoices:
-                    lines = db.session.query(
-                        db.func.sum(InvoiceLine.bi).label('bi'),
-                        db.func.sum(InvoiceLine.tvat).label('tvat')
-                    ).filter(InvoiceLine.invoice_id == rinvoice.id).group_by(InvoiceLine.vat).all()
-                    for line in lines:
-                        bi_total += float(line.bi or 0)
-                        tvat_total += float(line.tvat or 0)
+                    totals = (
+                        db.session.query(
+                            db.func.sum(InvoiceLine.bi).label('bi'),
+                            db.func.sum(InvoiceLine.tvat).label('tvat')
+                        ).filter(InvoiceLine.invoice_id == rinvoice.id).first()
+                    )
+                    if totals:
+                        bi_total += float(totals.bi or 0)
+                        tvat_total += float(totals.tvat or 0)
                 xml += f'<ImporteRectificacion><BaseRectificada>{self.cur(bi_total)}</BaseRectificada>'
                 xml += f'<CuotaRectificada>{self.cur(tvat_total)}</CuotaRectificada></ImporteRectificacion>'
 
@@ -242,7 +246,6 @@ class verifactuXML:
                     Invoice.company_id == company.id,
                     Invoice.verifactu_dt.is_(None)
                 ).order_by(Invoice.dt).limit(1000).all()
-
                 resp['companies'][company.id] = self.send(company, invoices)
 
         return resp
