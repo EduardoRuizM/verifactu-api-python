@@ -141,8 +141,10 @@ class Invoice(db.Model):
                urllib.parse.quote(self.dt.strftime('%d-%m-%Y')) + '&importe=' + urllib.parse.quote(f'{float(self.total):.2f}')
 
     def get_number(self, value, default=0):
-        value = str(value).replace(',', '.')
-        return float(value) if value.replace('.', '', 1).isdigit() else default
+        try:
+            return float(str(value).replace(',', '.'))
+        except:
+            return default
 
     def process_lines(self, data):
         num = 0

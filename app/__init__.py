@@ -81,7 +81,7 @@ def qr_invoice(company_id, id):
     return send_file(buf, mimetype='image/png')
 
 
-def insertInvoice(company_id, type, refs=None, stype=None):
+def insertInvoice(company_id, type, ref=None, stype=None):
     company = Company.query.get(company_id)
     if company is None:
         return jsonify({'error': 'Company not found'}), HTTPStatus.NOT_FOUND
@@ -92,6 +92,9 @@ def insertInvoice(company_id, type, refs=None, stype=None):
     if status:
         return ret, status
 
+    if ref:
+        ret['invoice_ref_id'] = ref.id
+
     try:
         invoice = Invoice(**ret)
         db.session.add(invoice)
@@ -100,11 +103,6 @@ def insertInvoice(company_id, type, refs=None, stype=None):
         ret, status = invoice.process_lines(data)
         if status:
             return ret, status
-
-        if refs:
-            for ref in refs:
-                db.session.query(Invoice).filter(Invoice.id == ref.id).update({'invoice_ref_id': invoice.id})
-            db.session.commit()
     except Exception as e:
         return jsonify({'error': str(e)}), HTTPStatus.BAD_REQUEST
 
@@ -117,65 +115,44 @@ def create_invoice(company_id):
     return insertInvoice(company_id, 'F1' if data.get('vat_id') else 'F2')
 
 
-@app.route('/api/<int:company_id>/invoices/<string:id>/rect', methods=['POST'])
+@app.route('/api/<int:company_id>/invoices/<int:id>/rect', methods=['POST'])
 def create_invoice_rect(company_id, id):
     data = request.get_json(silent=True) or {}
-    if not re.fullmatch(r'\d+(,\d+)*', id):
-        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
-
-    ids = [int(i) for i in id.split(',')]
-    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
-    for invoice in invoices:
-        if not (invoice.verifactu_type in ['F1', 'F2', 'F3']) or invoice.invoice_ref_id or invoice.voided:
-            return {'error': f'Not type F1/F2/F3, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+    invoice = db.session.query(Invoice).filter(Invoice.id == id, Invoice.company_id == company_id).first()
+    if not invoice or not (invoice.verifactu_type in ['F1', 'F2', 'F3']) or invoice.voided:
+        return {'error': f'Not exists, not type F1/F2/F3 or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
 
     type = 'R1' if 'vat_id' in data else 'R5'
-    return insertInvoice(company_id, type, invoices, 'I')
+    return insertInvoice(company_id, type, invoice, 'I')
 
 
-@app.route('/api/<int:company_id>/invoices/<string:id>/rect2', methods=['POST'])
+@app.route('/api/<int:company_id>/invoices/<int:id>/rect2', methods=['POST'])
 def create_invoice_rect2(company_id, id):
-    data = request.get_json(silent=True) or {}
-    if not re.fullmatch(r'\d+(,\d+)*', id):
-        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+    invoice = db.session.query(Invoice).filter(Invoice.id == id, Invoice.company_id == company_id).first()
+    if not invoice or not (invoice.verifactu_type in ['F1', 'F3']) or invoice.voided:
+        return {'error': f'Not exists, not type F1/F3 or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
 
-    ids = [int(i) for i in id.split(',')]
-    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
-    for invoice in invoices:
-        if not (invoice.verifactu_type in ['F1', 'F3']) or invoice.invoice_ref_id or invoice.voided:
-            return {'error': f'Not type F1/F3, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
-
-    return insertInvoice(company_id, 'R2', invoices, 'I')
+    return insertInvoice(company_id, 'R2', invoice, 'I')
 
 
-@app.route('/api/<int:company_id>/invoices/<string:id>/rectsust', methods=['POST'])
+@app.route('/api/<int:company_id>/invoices/<int:id>/rectsust', methods=['POST'])
 def create_invoice_rectsust(company_id, id):
     data = request.get_json(silent=True) or {}
-    if not re.fullmatch(r'\d+(,\d+)*', id):
-        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
-
-    ids = [int(i) for i in id.split(',')]
-    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
-    for invoice in invoices:
-        if not (invoice.verifactu_type in ['F1', 'F2', 'F3', 'R1', 'R5']) or invoice.invoice_ref_id  or invoice.voided:
-            return {'error': f'Not type F1/F2/F3/R1/R5, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
+    invoice = db.session.query(Invoice).filter(Invoice.id == id, Invoice.company_id == company_id).first()
+    if not invoice or not (invoice.verifactu_type in ['F1', 'F2', 'F3', 'R1', 'R5']) or invoice.voided:
+        return {'error': f'Not exists, not type F1/F2/F3/R1/R5 or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
 
     type = 'R1' if 'vat_id' in data else 'R5'
-    return insertInvoice(company_id, type, invoices, 'S')
+    return insertInvoice(company_id, type, invoice, 'S')
 
 
-@app.route('/api/<int:company_id>/invoices/<string:id>/sust', methods=['POST'])
+@app.route('/api/<int:company_id>/invoices/<int:id>/sust', methods=['POST'])
 def create_invoice_sust(company_id, id):
-    if not re.fullmatch(r'\d+(,\d+)*', id):
-        return jsonify({'error': f'Invalid {id}'}), HTTPStatus.NOT_FOUND
+    invoice = db.session.query(Invoice).filter(Invoice.id == id, Invoice.company_id == company_id).first()
+    if not invoice or invoice.verifactu_type != 'F2' or invoice.voided:
+        return {'error': f'Not exists, not type F2 or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
 
-    ids = [int(i) for i in id.split(',')]
-    invoices = db.session.query(Invoice).filter(Invoice.id.in_(ids), Invoice.company_id == company_id).all()
-    for invoice in invoices:
-        if invoice.verifactu_type != 'F2' or invoice.invoice_ref_id or invoice.voided:
-            return {'error': f'Not type F2, already referenced or voided: {invoice.get_number_format()}'}, HTTPStatus.BAD_REQUEST
-
-    return insertInvoice(company_id, 'F3', invoices)
+    return insertInvoice(company_id, 'F3', invoice)
 
 
 @app.route('/api/<int:company_id>/invoices/<string:id>/voided', methods=['POST'])
