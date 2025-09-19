@@ -109,7 +109,7 @@ class Invoice(db.Model):
 
     @staticmethod
     def validate_fields(data, element=None):
-        required = ['company_id', 'name']
+        required = ['company_id']
         allowed = ['company_id', 'name', 'vat_id', 'address', 'postal_code', 'city', 'state',
                    'vat', 'email', 'ref', 'comments', 'verifactu_type', 'verifactu_stype']
         return validate_fields(data, required, allowed, element)
