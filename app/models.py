@@ -137,7 +137,7 @@ class Invoice(db.Model):
 
     def get_verifactu_qr(self):
         return self.company.get_url_aeat() + 'wlpl/TIKE-CONT/ValidarQR?nif=' + urllib.parse.quote(self.company.vat_id) +\
-               '&numserie=' + urllib.parse.quote(self.get_number_format()) + '&fecha=' +\
+               '&numserie=' + urllib.parse.quote(self.get_number_format(), safe='') + '&fecha=' +\
                urllib.parse.quote(self.dt.strftime('%d-%m-%Y')) + '&importe=' + urllib.parse.quote(f'{float(self.total):.2f}')
 
     def get_number(self, value, default=0):
